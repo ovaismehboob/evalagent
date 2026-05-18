@@ -58,9 +58,10 @@ jobs:
           export ACR_LOGIN_SERVER="${{ env.ACR_LOGIN_SERVER }}"
           export AZURE_SEARCH_ENDPOINT="${{ vars.AZURE_SEARCH_ENDPOINT }}"
           export AZURE_OPENAI_ENDPOINT="${{ vars.AZURE_OPENAI_ENDPOINT }}"
+          export IDENTITY_CLIENT_ID="${{ vars.IDENTITY_CLIENT_ID }}"
 
-          # Apply service account (already has client ID from setup)
-          kubectl apply -f k8s/service-account.yaml
+          # Apply service account with variable substitution
+          envsubst < k8s/service-account.yaml | kubectl apply -f -
 
           # Apply deployment with variable substitution
           envsubst < k8s/deployment.yaml | sed "s|:latest|:${{ github.sha }}|g" | kubectl apply -f -
