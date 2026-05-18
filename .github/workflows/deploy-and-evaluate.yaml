@@ -1,0 +1,137 @@
+name: Deploy Agent & Run Evaluation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE_NAME: eval-agent
+
+jobs:
+  build-and-deploy:
+    name: Build, Deploy & Evaluate
+    runs-on: ubuntu-latest
+    steps:
+      # ── Checkout ───────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Azure Login (OIDC) ────────────────────────────────────────────────
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── Build & Push to ACR ───────────────────────────────────────────────
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name ${{ vars.ACR_NAME }}
+          ACR_LOGIN_SERVER=$(az acr show --name ${{ vars.ACR_NAME }} --query loginServer -o tsv)
+          IMAGE_TAG="${ACR_LOGIN_SERVER}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          IMAGE_LATEST="${ACR_LOGIN_SERVER}/${{ env.IMAGE_NAME }}:latest"
+
+          docker build -t "$IMAGE_TAG" -t "$IMAGE_LATEST" .
+          docker push "$IMAGE_TAG"
+          docker push "$IMAGE_LATEST"
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
+
+      # ── Set AKS Context ───────────────────────────────────────────────────
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+
+      # ── Deploy to AKS ─────────────────────────────────────────────────────
+      - name: Deploy to AKS
+        run: |
+          # Substitute variables in K8s manifests and apply
+          export ACR_LOGIN_SERVER="${{ env.ACR_LOGIN_SERVER }}"
+          export AZURE_SEARCH_ENDPOINT="${{ vars.AZURE_SEARCH_ENDPOINT }}"
+          export AZURE_OPENAI_ENDPOINT="${{ vars.AZURE_OPENAI_ENDPOINT }}"
+
+          # Apply service account (already has client ID from setup)
+          kubectl apply -f k8s/service-account.yaml
+
+          # Apply deployment with variable substitution
+          envsubst < k8s/deployment.yaml | sed "s|:latest|:${{ github.sha }}|g" | kubectl apply -f -
+
+          # Apply service
+          kubectl apply -f k8s/service.yaml
+
+      # ── Wait for Rollout ───────────────────────────────────────────────────
+      - name: Wait for deployment rollout
+        run: |
+          kubectl rollout status deployment/eval-agent --timeout=120s
+
+      # ── Get Agent Endpoint ─────────────────────────────────────────────────
+      - name: Get agent service endpoint
+        run: |
+          echo "Waiting for external IP..."
+          for i in $(seq 1 30); do
+            EXTERNAL_IP=$(kubectl get svc eval-agent-svc -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            if [ -n "$EXTERNAL_IP" ]; then
+              echo "Agent endpoint: http://$EXTERNAL_IP"
+              echo "AGENT_ENDPOINT=http://$EXTERNAL_IP" >> $GITHUB_ENV
+              break
+            fi
+            echo "  Waiting for LoadBalancer IP... ($i/30)"
+            sleep 10
+          done
+
+          if [ -z "$EXTERNAL_IP" ]; then
+            echo "ERROR: Timed out waiting for external IP"
+            exit 1
+          fi
+
+          # Wait for agent to be healthy
+          echo "Waiting for agent health check..."
+          for i in $(seq 1 12); do
+            if curl -sf "http://$EXTERNAL_IP/health" > /dev/null 2>&1; then
+              echo "Agent is healthy!"
+              break
+            fi
+            echo "  Agent not ready yet... ($i/12)"
+            sleep 10
+          done
+
+      # ── Run Evaluation ─────────────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run evaluation against deployed agent
+        env:
+          AGENT_ENDPOINT: ${{ env.AGENT_ENDPOINT }}
+          AZURE_AI_PROJECT_ENDPOINT: ${{ vars.AZURE_AI_PROJECT_ENDPOINT }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
+        run: |
+          echo "Running evaluation against $AGENT_ENDPOINT..."
+          python evaluate_rag.py
+
+      # ── Summary ────────────────────────────────────────────────────────────
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## Deployment & Evaluation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent Endpoint | ${{ env.AGENT_ENDPOINT }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View evaluation results in the [Foundry portal](https://ai.azure.com) → Evaluation tab." >> $GITHUB_STEP_SUMMARY

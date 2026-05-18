@@ -1,0 +1,8 @@
+{"query": "What is Contoso's refund policy?", "ground_truth": "Contoso offers a 30-day full refund on all products. Items must be unused and in original packaging. Refunds are processed within 5-7 business days. Digital products are non-refundable once downloaded."}
+{"query": "How much does express shipping cost?", "ground_truth": "Express shipping costs $12.99 and takes 2-3 business days."}
+{"query": "How long is the warranty on electronics?", "ground_truth": "All Contoso electronics come with a 2-year manufacturer warranty covering defects in materials and workmanship."}
+{"query": "Does Contoso sell my personal data?", "ground_truth": "No, Contoso never sells customer data to third parties."}
+{"query": "How do I redeem loyalty points?", "ground_truth": "Points can be redeemed at a rate of 100 points = $5 discount."}
+{"query": "Can I return a digital product?", "ground_truth": "Digital products are non-refundable once the download link has been accessed."}
+{"query": "How do I file a warranty claim?", "ground_truth": "Contact support@contoso.com with your order number and a description of the issue."}
+{"query": "Is international shipping available?", "ground_truth": "International shipping is available to 40 countries with delivery in 10-15 business days."}

@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+eval_data_with_responses.jsonl
+.venv/
+*.egg-info/

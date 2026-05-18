@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eval-agent
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eval-agent
+  template:
+    metadata:
+      labels:
+        app: eval-agent
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: eval-agent-sa
+      containers:
+        - name: eval-agent
+          image: "${ACR_LOGIN_SERVER}/eval-agent:latest"
+          ports:
+            - containerPort: 8000
+          env:
+            - name: AZURE_SEARCH_ENDPOINT
+              value: "${AZURE_SEARCH_ENDPOINT}"
+            - name: AZURE_SEARCH_INDEX
+              value: "contoso-policies"
+            - name: AZURE_OPENAI_ENDPOINT
+              value: "${AZURE_OPENAI_ENDPOINT}"
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: "gpt-4o"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

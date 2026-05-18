@@ -1,0 +1,8 @@
+azure-ai-projects>=2.0.0
+azure-identity
+azure-search-documents>=11.4.0
+openai>=1.30.0
+python-dotenv
+fastapi>=0.110.0
+uvicorn>=0.29.0
+requests>=2.31.0
