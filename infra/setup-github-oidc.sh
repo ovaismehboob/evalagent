@@ -9,19 +9,19 @@
 set -euo pipefail
 
 # ── Variables (edit these) ───────────────────────────────────────────────────
-SUBSCRIPTION="fabefbde-9477-48d7-bdd0-27af2eaeeb52"
-TENANT_ID="16b3c013-d300-468d-ac64-7eda0820b6d3"
-GITHUB_ORG="ovaismehboob"
+SUBSCRIPTION="<your-subscription-id>"         # az account show --query id -o tsv
+TENANT_ID="<your-tenant-id>"                  # az account show --query tenantId -o tsv
+GITHUB_ORG="<your-github-org-or-username>"
 GITHUB_REPO="evalagent"
 APP_NAME="github-evalagent-deploy"
 
 # Resource groups for role assignments
 AKS_RG="rg-eval-agent-aks"
-ACR_NAME="acrevalagent"
-FOUNDRY_RG="rg-contoso-helpdesk"
-FOUNDRY_ACCOUNT="ai-account-ibfr6ordyckcq"
-OPENAI_RG="rg-eval-demo"
-OPENAI_NAME="aoai-eval-demo"
+ACR_NAME="<your-acr-name>"
+FOUNDRY_RG="<your-foundry-resource-group>"
+FOUNDRY_ACCOUNT="<your-foundry-account-name>"
+OPENAI_RG="<your-openai-resource-group>"
+OPENAI_NAME="<your-openai-account-name>"
 
 # ── Set subscription ────────────────────────────────────────────────────────
 az account set --subscription "$SUBSCRIPTION"
@@ -106,7 +106,7 @@ echo ""
 echo "  ACR_NAME=$ACR_NAME"
 echo "  AKS_CLUSTER_NAME=aks-eval-agent"
 echo "  AKS_RESOURCE_GROUP=$AKS_RG"
-echo "  AZURE_SEARCH_ENDPOINT=https://search-eval-demo.search.windows.net"
-echo "  AZURE_OPENAI_ENDPOINT=https://aoai-eval-demo.openai.azure.com"
-echo "  AZURE_AI_PROJECT_ENDPOINT=https://ai-account-ibfr6ordyckcq.services.ai.azure.com/api/projects/ai-project-contoso-helpdesk"
+echo "  AZURE_SEARCH_ENDPOINT=https://${SEARCH_NAME:-<your-search-service>}.search.windows.net"
+echo "  AZURE_OPENAI_ENDPOINT=https://${OPENAI_NAME:-<your-openai-account>}.openai.azure.com"
+echo "  AZURE_AI_PROJECT_ENDPOINT=https://<your-foundry-account>.services.ai.azure.com/api/projects/<your-project>"
 echo "  AZURE_OPENAI_DEPLOYMENT=gpt-4o"

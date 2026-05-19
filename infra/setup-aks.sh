@@ -8,22 +8,22 @@
 set -euo pipefail
 
 # ── Variables (edit these) ───────────────────────────────────────────────────
-SUBSCRIPTION="fabefbde-9477-48d7-bdd0-27af2eaeeb52"
+SUBSCRIPTION="<your-subscription-id>"         # az account show --query id -o tsv
 LOCATION="eastus2"
 RG="rg-eval-agent-aks"
-ACR_NAME="acrevalagent"          # Must be globally unique, alphanumeric only
+ACR_NAME="<your-acr-name>"          # Must be globally unique, alphanumeric only
 AKS_NAME="aks-eval-agent"
 IDENTITY_NAME="id-eval-agent"
 K8S_SA_NAME="eval-agent-sa"
 K8S_NAMESPACE="default"
 
 # Existing resources (used for RBAC)
-SEARCH_RG="rg-eval-demo"
-SEARCH_NAME="search-eval-demo"
-OPENAI_RG="rg-eval-demo"
-OPENAI_NAME="aoai-eval-demo"
-FOUNDRY_RG="rg-contoso-helpdesk"
-FOUNDRY_ACCOUNT="ai-account-ibfr6ordyckcq"
+SEARCH_RG="<your-search-resource-group>"
+SEARCH_NAME="<your-search-service-name>"
+OPENAI_RG="<your-openai-resource-group>"
+OPENAI_NAME="<your-openai-account-name>"
+FOUNDRY_RG="<your-foundry-resource-group>"
+FOUNDRY_ACCOUNT="<your-foundry-account-name>"
 
 # ── Set subscription ────────────────────────────────────────────────────────
 az account set --subscription "$SUBSCRIPTION"
